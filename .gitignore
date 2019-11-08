@@ -1,1 +1,21 @@
 /venv/
+/utils/
+.gitignore
+AIzaSyByLXbJTyhb0DLikUOLyWlbnSCVECqy3qA
+FuncMl.py
+a_ocr.txt
+source/20191014_210839.jpg
+source/20191104_142003.mp4
+source/Template.png
+source/Video 1.wmv
+source/Video 2.wmv
+source/Video 3.wmv
+source/cropped.jpg
+source/top_frame.jpg
+source/total.jpg
+source/total1.jpg
+source/total2.jpg
+temp190235.json
+temp834994.json
+temp936263.json
+total.jpg
