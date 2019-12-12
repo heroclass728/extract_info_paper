@@ -35,7 +35,7 @@ class ExtractGoogleOCR:
     @staticmethod
     def save_text(filename, text):
         file1 = open(filename, 'w')
-        file1.write(text)
+        file1.write(text.decode(encoding="utf-8"))
         file1.close()
 
     @staticmethod
@@ -47,8 +47,8 @@ class ExtractGoogleOCR:
     def __make_request_json(img_file, output_filename, detection_type='text'):
 
         with open(img_file, 'rb') as image_file:
-            # content_json_obj = {'content': base64.b64encode(image_file.read()).decode('UTF-8')}
-            content_json_obj = {'content': base64.b64encode(image_file.read())}
+            content_json_obj = {'content': base64.b64encode(image_file.read()).decode('UTF-8')}
+            # content_json_obj = {'content': base64.b64encode(image_file.read())}
 
         if detection_type == 'text':
             feature_json_arr = [{'type': 'TEXT_DETECTION'}, {'type': 'DOCUMENT_TEXT_DETECTION'}]
@@ -96,6 +96,11 @@ class ExtractGoogleOCR:
 
         # --------------------- delete temporary files -------------------------------
         self.rm_file(temp_json)
-        self.save_text(self.google_key, "")
+        # self.save_text(self.google_key, "")
+        if ret_json is not None and detection_type == 'text':
+            # for i in range(len(ret_json)):
+            #     ret_json[i]['description'] = self.conv_str(ret_json[i]['description'])
+
+            self.save_text('a_ocr.txt', ret_json[0]['description'].encode('utf-8'))
 
         return ret_json

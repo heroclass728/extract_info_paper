@@ -1,0 +1,233 @@
+#:set light_blue_background [0.08, 0.17, 0.33, 1.0]
+#:set blue_button_2 [0.40, 0.85, 1.65, 1.0]
+#:set dark_blue_background [0.04, 0.08, 0.14, 1.0]
+
+<ShowDatabase>:
+    BoxLayout:
+        canvas.before:
+            Color:
+                rgba: dark_background
+            Rectangle:
+                pos: self.pos
+                size: self.size
+        orientation: 'vertical'
+        padding: [20, 20, 20, 20]
+        spacing: 10
+        FloatLayout:
+            size_hint_y: 0.07
+            canvas.before:
+                Color:
+                    rgba: light_blue_background
+                Rectangle:
+                    pos: self.pos
+                    size: self.size
+
+            padding: [10, 10, 10, 10]
+            Label:
+                size_hint: 0.2, 1.0
+                pos_hint : {'center_x':.5, 'center_y':.5}
+                text: 'SHOW DATABASE'
+
+            Button:
+                text: 'BACK TO MAIN SCREEN'
+
+                background_color: blue_button_2
+
+                auto_bring_to_front: True
+                size_hint: 0.25, 0.9
+                pos_hint : {'center_x':.125, 'center_y':.5}
+                on_press:
+                    root.manager.transition.direction = 'right'
+                    root.manager.current = 'main_screen'
+            Button:
+                text: 'ADD'
+                background_color: blue_button_2
+                auto_bring_to_front: True
+                size_hint: .1, 0.9
+                pos_hint : {'center_x':.85, 'center_y':.5}
+                on_press:
+                    root.add_data()
+            Button:
+                text: 'REMOVE'
+                background_color: blue_button_2
+                auto_bring_to_front: True
+                size_hint: 0.1, 0.9
+                pos_hint : {'center_x':.95, 'center_y':.5}
+                on_press:
+                    root.remove_data()
+        BoxLayout:
+            orientation: "vertical"
+
+            GridLayout:
+                size_hint: 1, None
+                size_hint_y: None
+                height: 25
+                cols: 4
+
+                Label:
+                    text: "User ID"
+                Label:
+                    text: "User Roll Number"
+                Label:
+                    text: "User Exam Type"
+                Label:
+                    text: "User Total Marks"
+
+            BoxLayout:
+                RecycleView:
+                    viewclass: 'SelectableButton'
+                    data: [{'text': str(x)} for x in root.data_items]
+                    SelectableRecycleGridLayout:
+                        cols: 4
+                        default_size: None, dp(26)
+                        default_size_hint: 1, None
+                        size_hint_y: None
+                        height: self.minimum_height
+                        orientation: 'vertical'
+                        multiselect: True
+                        touch_multiselect: True
+
+<WarningPopup>:
+    id: warn_pop
+    title: "Warning"
+    size_hint: None, None
+    size: 200, 200
+    auto_dismiss: False
+
+    BoxLayout:
+        orientation: 'vertical'
+        Label:
+            size_hint: 1, 0.7
+            text: root.label
+        Button:
+            size_hint: 1, 0.3
+            text: 'OK'
+            on_press: root.dismiss()
+
+<DataAddPopup>:
+    title: "Add Data"
+    size_hint: None, None
+    size: 300, 200
+    BoxLayout:
+        orientation: "vertical"
+        BoxLayout:
+            size_hint: 1, 0.2
+            orientation: "horizontal"
+            spacing: 5
+            padding: [3, 3, 3, 3]
+            Label:
+                size_hint: 0.5, 1
+                text: "ROLL NUMBER"
+            TextInput:
+                size_hint: 0.5, 1
+                id: roll_no
+                text: ""
+                multiline: False
+        BoxLayout:
+            size_hint: 1, 0.2
+            orientation: "horizontal"
+            spacing: 5
+            padding: [3, 3, 3, 3]
+            Label:
+                size_hint: 0.5, 1
+                text: "EXAM TYPE"
+            TextInput:
+                size_hint: 0.5, 1
+                id: exam_type
+                text: ""
+                multiline: False
+        BoxLayout:
+            orientation: "horizontal"
+            size_hint: 1, 0.2
+            spacing: 5
+            padding: [3, 3, 3, 3]
+            Label:
+                size_hint: 0.5, 1
+                text: "TOTAL MARKS"
+            TextInput:
+                size_hint: 0.5, 1
+                id: total_marks
+                text: ""
+                multiline: False
+        BoxLayout:
+            orientation: "horizontal"
+            size_hint: 1, 0.25
+            spacing: 5
+            padding: [3, 3, 3, 3]
+            Button:
+                size_hint: 0.5, 1
+                text: "Add Data"
+                on_release:
+                    root.obj.add_changes(roll_no.text, total_marks.text, exam_type.text)
+            Button:
+                size_hint: 0.5, 1
+                text: "Cancel"
+                on_release:
+                    root.dismiss()
+
+<DataRemovePopup>:
+    title: "Remove Data"
+    size_hint: None, None
+    size: 300, 150
+    BoxLayout:
+        orientation: "vertical"
+        BoxLayout:
+            size_hint: 1, 0.2
+            orientation: "horizontal"
+            spacing: 5
+            padding: [3, 3, 3, 3]
+            Label:
+                size_hint: 0.5, 1
+                text: "USER ID"
+            TextInput:
+                size_hint: 0.5, 1
+                id: user_id
+                text: ""
+                multiline: False
+        BoxLayout:
+            orientation: "horizontal"
+            size_hint: 1, 0.25
+            spacing: 5
+            padding: [3, 3, 3, 3]
+            Button:
+                size_hint: 0.5, 1
+                text: "Remove Data"
+                on_release:
+                    root.obj.remove_changes(user_id.text)
+            Button:
+                size_hint: 0.5, 1
+                text: "Cancel"
+                on_release:
+                    root.dismiss()
+
+<DataUpdatePopup>:
+    title: "Update Data"
+    size_hint: None, None
+    size: 300, 300
+    auto_dismiss: False
+
+    BoxLayout:
+        orientation: "vertical"
+        TextInput:
+            id: txtinput
+            text: root.obj_text
+        Button:
+            size_hint: 1, 0.2
+            text: "Save Changes"
+            on_release:
+                root.obj.update_changes(txtinput.text)
+                root.dismiss()
+        Button:
+            size_hint: 1, 0.2
+            text: "Cancel Changes"
+            on_release: root.dismiss()
+
+
+<SelectableButton>:
+    # Draw a background to indicate selection
+    canvas.before:
+        Color:
+            rgba: (.0, 0.9, .1, .3) if self.selected else (0, 0, 0, 1)
+        Rectangle:
+            pos: self.pos
+            size: self.size

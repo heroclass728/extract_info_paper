@@ -2,20 +2,34 @@ import os
 import cv2
 import numpy as np
 import math
+import time
+import threading
 
+from utils.constants import CUR_DIR, FRAME_RATE
 from apply_ocr.match_template import MatchTemplate
 from apply_ocr.extract_handwritten_digit import DetectDigits
 from keras.models import load_model
-from google_vision import ExtractGoogleOCR
+from manage_database.write_data import ManageDatabase
+from manage_database.connect_db import connect_db
 
 
-class DetectText:
+class DetectText(threading.Thread):
 
-    def __init__(self, path):
+    def __init__(self, queue):
+        super(DetectText, self).__init__()
 
-        self.dirpath = path
+        self.dirpath = CUR_DIR
 
-        self.total_path = os.path.join(self.dirpath, 'source/total2.jpg')
+        self._stopped = threading.Event()
+        self._stopped.clear()
+        self._paused = threading.Event()
+        self._paused.clear()
+
+        self.roll = ""
+        self.total = ""
+        self.alert = ""
+        self.exam_type = ""
+        # self.total_path = os.path.join(self.dirpath, 'source/total2.jpg')
 
         # Load the classifier
         model_path = os.path.join(self.dirpath, 'model/digit_model.h5')
@@ -23,45 +37,64 @@ class DetectText:
 
         self.matTemp = MatchTemplate(self.dirpath)
         self.detectDigit = DetectDigits(self.dirpath, self.model)
+        self.db = connect_db(self.dirpath)
+        self.manage_database = ManageDatabase(self.db)
 
-    def detect_text(self):
+        self.frame_queue = queue
 
-        CONTOUR_THRESH_VALUE = 80
-        CONTOUR_THRESH_COUNT = 50
+    def pause(self):
+        self._paused.set()
 
-        video_path = os.path.join(self.dirpath, 'source/1.mp4')
-        cap = cv2.VideoCapture(video_path)
+    def resume(self):
+        self._paused.clear()
 
-        (major_ver, minor_ver, subminor_ver) = cv2.__version__.split('.')
-        if (int(major_ver)) < 3:
-            frame_rate = cap.get(cv2.cv.CV_CAP_PROP_FPS)
-        else:
-            frame_rate = cap.get(cv2.CAP_PROP_FPS)
+    def stop(self):
+        self._stopped.set()
+
+    def run(self):
 
         feature_params = dict(maxCorners=100, qualityLevel=0.3, minDistance=7, blockSize=8)
         lk_params = dict(winSize=(15, 15), maxLevel=2,
                          criteria=(cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 0.03))
 
-        _, old_frame = cap.read()
+        old_frame = None
+        while True:
+            try:
+                old_frame = self.frame_queue.get()
+            except self.frame_queue.Empty:
+                time.sleep(1)
+            if old_frame is not None:
+                break
+
         old_gray = cv2.cvtColor(old_frame, cv2.COLOR_BGR2GRAY)
 
         new_paper = False
         frame_cnt = 0
-        frame_limit = int(3 * frame_rate)
+        frame_limit = int(3 * FRAME_RATE)
         distance_flux = []
+
         while True:
 
-            ret, new_frame = cap.read()
-            if not ret:
+            # ret, new_frame = cap.read()
+            if self._stopped.isSet():
                 break
+            elif self._paused.isSet():
+                time.sleep(.1)
+                continue
+
+            try:
+                new_frame = self.frame_queue.get()
+                if self._stopped.isSet():
+                    break
+            except self.frame_queue.Empty:
+                time.sleep(0.2)
+                continue
 
             p0 = cv2.goodFeaturesToTrack(old_gray, mask=None, **feature_params)
             new_gray = cv2.cvtColor(new_frame, cv2.COLOR_BGR2GRAY)
             p1, st, err = cv2.calcOpticalFlowPyrLK(old_gray, new_gray, p0, None, **lk_params)
 
-            ret, fnd_contour_gray = cv2.threshold(new_gray, CONTOUR_THRESH_VALUE, 255, cv2.THRESH_BINARY)
-            contours, _ = cv2.findContours(fnd_contour_gray, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_NONE)
-            contour_len = len(contours)
+            _, new_gray_thresh = cv2.threshold(new_gray, 200, 255, cv2.THRESH_BINARY)
 
             # calc distance
             diff_x, diff_y = 0, 0
@@ -86,29 +119,38 @@ class DetectText:
 
             ret_value = estimate_distances(distance_flux)
 
-            if ret_value is True and contour_len > CONTOUR_THRESH_COUNT:
+            if ret_value is False:
 
                 new_paper = True
+
+            elif ret_value is True and new_paper is True:
+
                 frame_cnt += 1
 
-            elif ret_value is False and new_paper is True:
+            if frame_cnt == frame_limit:
+                avg_meaning_frame = new_frame
+                self.roll, total_img, self.exam_type = self.matTemp.match_template(avg_meaning_frame)
+                self.total = self.detectDigit.detect_handwritten_digits(total_img)
+                print(self.roll, self.exam_type, self.total)
+                if self.roll == "" or self.total == "" or self.exam_type == "":
+
+                    self.alert = "Not Saved into Database"
+
+                else:
+                    # print("roll number:", self.roll)
+                    # # cv2.imwrite(self.total_path, total_img)
+                    # self.total = self.detectDigit.detect_handwritten_digits(total_img)
+                    #
+                    # print("total marks:", self.total)
+                    self.manage_database.insert_data(self.roll, self.total, self.exam_type)
+                    self.alert = "Successfully Saved into Database"
 
                 new_paper = False
                 frame_cnt = 0
 
-            if frame_cnt == frame_limit:
-
-                avg_meaning_frame = new_frame
-                roll, total_img = self.matTemp.match_template(avg_meaning_frame)
-                total = self.detectDigit.detect_handwritten_digits(total_img)
-                print("roll number:", roll)
-                print("total marks:", total)
-
             old_gray = new_gray
 
-        cap.release()
-        f_path = os.path.join(self.dirpath, "source", "vision_key.txt")
-        ExtractGoogleOCR(self.dirpath).save_text(f_path, "")
+        self.db.close()
 
 
 def calculate_distance_between_point(pts1, pts2):
@@ -125,10 +167,10 @@ def calculate_distance_between_point(pts1, pts2):
 
 
 def estimate_distances(flux):
-
+    ret_val = False
     for dist in flux:
 
-        if dist > 5:
+        if dist > 1:
             ret_val = False
             break
         ret_val = True

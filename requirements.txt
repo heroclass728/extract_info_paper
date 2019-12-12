@@ -1,8 +1,11 @@
+mysql
+kivy
 keras
 requests
 numpy
 scikit-learn
 scikit-image
-cv2
+opencv_python
 Pillow==6.2.1
 pytesseract==0.3.0
+tensorflow

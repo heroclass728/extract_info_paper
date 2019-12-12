@@ -3,7 +3,7 @@ import numpy as np
 
 
 kernel2 = np.ones((2, 2), np.uint8)
-THRESH_AREA = 33
+THRESH_AREA = 5
 
 
 class DetectDigits:
@@ -15,19 +15,24 @@ class DetectDigits:
 
     def detect_handwritten_digits(self, image):
 
+        image_bgr = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
         width = image.shape[1]
         # Convert to grayscale and apply Gaussian filtering
-        im_gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        img = cv2.GaussianBlur(im_gray, (5, 5), 0)
+        # im_gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        # img = cv2.GaussianBlur(im_gray, (5, 5), 0)
 
         # Threshold the image
-        thresh_image = cv2.adaptiveThreshold(img, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 5)
-        thresh_image_not = cv2.bitwise_not(thresh_image)
+        # thresh_image = cv2.adaptiveThreshold(img, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 5)
+        thresh_image_not = cv2.bitwise_not(image)
 
         # Find contours in the image
         contours, _ = cv2.findContours(thresh_image_not, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         correct_contours = extract_correct_contour(contours)
         rects = [cv2.boundingRect(ctr) for ctr in correct_contours]
+        # for rect in rects:
+        #     cv2.rectangle(image_bgr, (rect[0], rect[1]), (rect[0]+rect[2], rect[1]+rect[3]), (0, 0,255),1)
+        #     cv2.imshow("image_bgr", image_bgr)
+        #     cv2.waitKey()
 
         total_value = ""
 
@@ -62,7 +67,7 @@ class DetectDigits:
 
                 rect = cv2.boundingRect(contour)
                 # Draw the rectangles
-                cv2.rectangle(img, (rect[0], rect[1]), (rect[0] + rect[2], rect[1] + rect[3]), (0, 255, 0), 1)
+                # cv2.rectangle(img, (rect[0], rect[1]), (rect[0] + rect[2], rect[1] + rect[3]), (0, 255, 0), 1)
 
                 digit = self.extract_digit_from_contour(rect, digit_image_gray)
                 total_value += digit
