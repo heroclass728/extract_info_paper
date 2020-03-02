@@ -35,21 +35,31 @@ class MatchTemplate:
 
     def match_template(self, image):
 
-        MASK_THRESH = 100
+        MASK_THRESH = 120
 
         img = image
         _, mask_img = cv2.threshold(img, thresh=MASK_THRESH, maxval=255, type=cv2.THRESH_BINARY)
         cv2.imwrite(self.paper_path, mask_img)
         mask_img_gray = cv2.cvtColor(mask_img, cv2.COLOR_BGR2GRAY)
+        # cv2.imshow("mask image", mask_img_gray)
+        # cv2.waitKey()
         contours, _ = cv2.findContours(mask_img_gray, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE)
         sorted_contours = sorted(contours, key=cv2.contourArea, reverse=True)
         boundingRect = cv2.boundingRect(sorted_contours[0])
-
+        # cv2.drawContours(image, [sorted_contours[0]], 0, (0, 0, 255), 1)
+        # cv2.rectangle(image, (boundingRect[0], boundingRect[1]),
+        #               (boundingRect[0] + boundingRect[2], boundingRect[1] + boundingRect[3]), (0, 0, 255), 3)
+        # cv2.imshow("contour image", image)
+        # cv2.waitKey()
         bounding_points = [[boundingRect[0], boundingRect[1]], [boundingRect[0], boundingRect[1] + boundingRect[3]],
                            [boundingRect[0] + boundingRect[2], boundingRect[1]],
                            [boundingRect[0] + boundingRect[2], boundingRect[1] + boundingRect[3]]]
 
         corner_points = np.float32(extract_paper_corner(bounding_points, sorted_contours[0]))
+        # for pt in corner_points:
+        #     cv2.circle(image, (pt[0], pt[1]), 5, (0, 0, 255))
+        #     cv2.imshow("points", image)
+        #     cv2.waitKey()
         bounding_points = np.float32(bounding_points)
         M = cv2.getPerspectiveTransform(corner_points, bounding_points)
         img_dst = cv2.warpPerspective(image, M, (image.shape[1], image.shape[0]))
